@@ -17,7 +17,7 @@ Window {
         // note can't bind this value the the parent Column type.
         // must go to the column's parent.
         rect.width = Qt.binding(function() { return chatScroll.width * 0.9 });
-        rect.height = 0; // Set height to 0 to fit its contents
+        rect.height = 0;
 
         var textItem =
                 Qt.createQmlObject('import QtQuick 2.0; Text {}', rect);
@@ -42,7 +42,13 @@ Window {
             rect.color = "lightgreen";
         }
 
-        rect.height = textItem.height + 20; // Add some padding
+        textItem.anchors.top = Qt.binding(function() { return rect.top });
+        textItem.anchors.bottom = Qt.binding(function() { return rect.bottom });
+
+        rect.height = Qt.binding(function() {
+            return textItem.contentHeight + 20;
+        });
+
 
         return rect;
     }
@@ -81,6 +87,7 @@ Window {
     }
 
     ScrollView {
+        id: inputScroller
         width: parent.width * 0.8
         height: Math.min(contentHeight + 20, 200)
         anchors.bottom: parent.bottom
