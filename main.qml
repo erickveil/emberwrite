@@ -1,7 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Layouts
-import QtQuick.Templates
 
 Window {
     width: 800
@@ -77,25 +75,25 @@ Window {
     }
 
     ScrollView {
-                width: parent.width * 0.8
-                height: Math.min(contentHeight + 20, 200)
-                anchors.bottom: parent.bottom
-                anchors.horizontalCenter: parent.horizontalCenter
+        width: parent.width * 0.8
+        height: Math.min(contentHeight + 20, 200)
+        anchors.bottom: parent.bottom
+        anchors.horizontalCenter: parent.horizontalCenter
 
-                TextArea {
-                    id: messageInput
-                    wrapMode: TextArea.WrapAnywhere
-                    font.family: "Arial"
-                    font.pointSize: 14
-                    font.weight: font.Bold
-                    color: "black"
-                    padding: 10
-                    placeholderText: qsTr("Enter message...")
-                    background: Rectangle {
-                        radius: 10
-                        color: "grey"
-                    }
-                }
+        TextArea {
+            id: messageInput
+            wrapMode: TextArea.WrapAnywhere
+            font.family: "Arial"
+            font.pointSize: 14
+            font.weight: font.Bold
+            color: "black"
+            padding: 10
+            placeholderText: qsTr("Enter message...")
+            background: Rectangle {
+                radius: 10
+                color: "grey"
             }
+        }
+    }
 
 }
