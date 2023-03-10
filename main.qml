@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 
 Window {
+    id: mainWin
     width: 800
     height: 600
     visible: true
@@ -13,7 +14,9 @@ Window {
                                       chatCol);
 
         rect.radius = 10;
-        rect.width = chatCol.width * 0.9;
+        // note can't bind this value the the parent Column type.
+        // must go to the column's parent.
+        rect.width = Qt.binding(function() { return chatScroll.width * 0.9 });
         rect.height = 0; // Set height to 0 to fit its contents
 
         var textItem =
@@ -21,15 +24,18 @@ Window {
 
         textItem.text = text;
         textItem.color = "black";
-        textItem.font.pixelSize = 20;
+        textItem.font.family = "StoneSansStd-Medium";
+        textItem.font.pixelSize = 16;
         textItem.verticalAlignment = Text.AlignVCenter;
         textItem.wrapMode = Text.WordWrap;
-        textItem.width = rect.width;
+        textItem.width = Qt.binding(function() { return rect.width });
         textItem.height = textItem.contentHeight;
         textItem.x = rect.x + 10;
 
         if (isRightAligned) {
-            rect.x = chatCol.width - rect.width;
+            rect.x = Qt.binding(function() {
+                return chatScroll.width - rect.width
+            });
             rect.color = "lightblue";
         } else {
             rect.x = 0;
@@ -83,9 +89,8 @@ Window {
         TextArea {
             id: messageInput
             wrapMode: TextArea.WrapAnywhere
-            font.family: "Arial"
-            font.pointSize: 14
-            font.weight: font.Bold
+            font.family: "StoneSansStd-Medium"
+            font.pointSize: 12
             color: "black"
             padding: 10
             placeholderText: qsTr("Enter message...")
