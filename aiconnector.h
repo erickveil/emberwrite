@@ -55,6 +55,8 @@ public:
      */
     void requestChatCompletion(QString newUserMsg);
 
+    void requestChatCompletion();
+
     QString loadKey();
     void saveKey(QString key);
 

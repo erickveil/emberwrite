@@ -126,6 +126,15 @@ void AiConnector::requestChatCompletion(QString newUserMsg)
     deliverToApi(_latestChat);
 }
 
+void AiConnector::requestChatCompletion()
+{
+    FileInterface file;
+    QByteArray latestChat = file.loadChatFile();
+    // TODO: Check for error?
+    _latestChat = QJsonDocument::fromJson(latestChat);
+    deliverToApi(_latestChat);
+}
+
 QString AiConnector::loadKey()
 {
     QString keyPath = _appDirPath + "/apikey";
@@ -228,7 +237,6 @@ QByteArray AiConnector::createJsonPayload(QJsonDocument chatDoc)
     rootDataObj.insert("max_tokens", 256);
     rootDataObj.insert("presence_penalty", 0);
     rootDataObj.insert("temperature", 0.7);
-    rootDataObj.insert("top_p", 1);
     rootDataObj.insert("stream", false);
     QJsonDocument jsonDoc(rootDataObj);
     QByteArray postData = jsonDoc.toJson();

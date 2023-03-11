@@ -3,7 +3,10 @@
 ContentLoader::ContentLoader(QObject *parent)
     : QObject{parent}
 {
-
+    std::function<void (QString)> callback = [&] (QString response){
+        onApiResponded(response);
+    };
+    _api.setSuccessCallback(callback);
 }
 
 void ContentLoader::init(QObject *qmlObj)
@@ -28,8 +31,7 @@ QString ContentLoader::appendNewUserMessage(QString msg)
 
 void ContentLoader::requestNewResponse()
 {
-    onApiResponded("Test response, please ignore");
-
+    _api.requestChatCompletion();
 }
 
 void ContentLoader::onApiResponded(QString response)

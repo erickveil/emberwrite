@@ -11,6 +11,7 @@ class ContentLoader : public QObject
     Q_OBJECT
 
     QObject *_qmlMainWindowObj;
+    AiConnector _api;
 
 public:
     explicit ContentLoader(QObject *parent = nullptr);
