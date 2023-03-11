@@ -121,7 +121,7 @@ void AiConnector::setSuccessCallback(std::function<void (QString)> cb)
 
 void AiConnector::requestChatCompletion(QString newUserMsg)
 {
-    loadChatFromFile(newUserMsg);
+    loadChatFromFileAndAppend(newUserMsg);
     saveChat(_latestChat);
     deliverToApi(_latestChat);
 }
@@ -158,13 +158,14 @@ void AiConnector::saveKey(QString key)
     file.close();
 }
 
-void AiConnector::loadChatFromFile(QString newUserMsg)
+QJsonDocument AiConnector::loadChatFromFileAndAppend(QString newUserMsg)
 {
     QByteArray fullChat = _chatPreloader.loadChatFile();
     qDebug() << "Loaded chat: " << fullChat;
     QJsonDocument chatDoc = QJsonDocument::fromJson(fullChat);
     QJsonDocument appendedChat = appendNewUserMsg(chatDoc, newUserMsg);
     _latestChat = appendedChat;
+    return _latestChat;
 }
 
 QJsonDocument AiConnector::appendNewUserMsg(QJsonDocument fullChat,

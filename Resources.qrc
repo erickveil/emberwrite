@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>main.qml</file>
+        <file>paper-plane-icon.png</file>
     </qresource>
 </RCC>

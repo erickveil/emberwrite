@@ -58,8 +58,8 @@ public:
     QString loadKey();
     void saveKey(QString key);
 
+    QJsonDocument loadChatFromFileAndAppend(QString newUserMsg);
 private:
-    void loadChatFromFile(QString newUserMsg);
     QJsonDocument appendNewUserMsg(QJsonDocument fullChat, QString newMsg);
     QJsonDocument appendNewAssistantMsg(QJsonDocument fullChat, QString newMsg);
     QJsonDocument appendNewMsg(QJsonDocument fullChat, QString newMsg,

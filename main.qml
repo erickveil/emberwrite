@@ -9,6 +9,8 @@ Window {
     title: qsTr("Hello World")
     color: "black"
 
+    property var msgList: [];
+
     function createMsgBubble(text, isRightAligned) {
         var rect = Qt.createQmlObject('import QtQuick 2.0; Rectangle {}',
                                       chatCol);
@@ -50,9 +52,30 @@ Window {
         });
 
 
+        msgList.push(rect);
         return rect;
     }
 
+    function drawFullChat(chatList) {
+        for (let i=0; i < chatList.length; i++) {
+            var msgObj = chatList[i];
+            var msgRole = msgObj.role;
+            var isRightAligned = msgRole === "user";
+            var msgContent = msgObj.content;
+            var msgBubble = createMsgBubble(msgContent, isRightAligned);
+            chatCol.children.push(msgBubble);
+        }
+    }
+
+    function clearChatColumn() {
+        for (var i = 0; i < msgList.length; i++) {
+            msgList[i].destroy();
+        }
+    }
+
+    function onApiResponded(response) {
+        console.log("Signal caught: " + response);
+    }
 
     ScrollView {
         id: chatScroll
@@ -71,17 +94,7 @@ Window {
             Component.onCompleted: {
                 var chatData = contentLoader.loadChat();
                 var chatList = JSON.parse(chatData);
-
-                for (let i=0; i < chatList.length; i++) {
-                    var msgObj = chatList[i];
-                    var msgRole = msgObj.role;
-                    var isRightAligned = msgRole === "user";
-                    console.log(msgRole);
-                    console.log(isRightAligned);
-                    var msgContent = msgObj.content;
-                    var msgBubble = createMsgBubble(msgContent, isRightAligned);
-                    chatCol.children.push(msgBubble);
-                }
+                drawFullChat(chatList);
             }
         }
     }
@@ -92,6 +105,7 @@ Window {
         height: Math.min(contentHeight + 20, 200)
         anchors.bottom: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottomMargin: 10
 
         TextArea {
             id: messageInput
@@ -105,6 +119,58 @@ Window {
                 radius: 10
                 color: "grey"
             }
+        }
+    }
+
+    Rectangle {
+        id: sendButton
+            anchors.left: inputScroller.right
+            anchors.bottom: inputScroller.bottom
+            radius: 20
+            width: 30
+            height: 30
+            color: "black"
+            border.color: "light blue"
+            border.width: 3
+            anchors.leftMargin: 10
+            anchors.bottomMargin: 10
+
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                onEntered: {
+                    sendButton.color = "grey"
+                }
+                onExited: {
+                    sendButton.color = "black"
+                }
+                onClicked: {
+                    if (messageInput.text === "") { return; }
+
+                    // set user message and display
+                    var newChatData =
+                            contentLoader.appendNewUserMessage(messageInput.text);
+                    clearChatColumn();
+                    var chatList = JSON.parse(newChatData);
+                    drawFullChat(chatList);
+
+                    // clear chat window
+                    messageInput.text = "";
+
+
+                    // get assistant message and display
+                    contentLoader.requestNewResponse();
+                }
+
+
+            }
+
+        Image {
+            id: sendIcon
+            source: "qrc:/paper-plane-icon.png"
+            width: 20
+            height: 20
+            anchors.centerIn: parent
         }
     }
 

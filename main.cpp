@@ -1,5 +1,6 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QQmlComponent>
 #include <QQmlContext>
 
 #include <functional>
@@ -33,14 +34,20 @@ int main(int argc, char *argv[])
     ContentLoader loader;
     context->setContextProperty("contentLoader", &loader);
 
-
     const QUrl url(u"qrc:/EmberWrite/main.qml"_qs);
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
-                     &app, [url](QObject *obj, const QUrl &objUrl) {
+                     &app, [&](QObject *obj, const QUrl &objUrl) {
         if (!obj && url == objUrl)
             QCoreApplication::exit(-1);
+
+        loader.init(obj);
+
+        //QMetaObject::invokeMethod(obj, "onApiResponded", Q_ARG(QVariant, "Hello from main."));
     }, Qt::QueuedConnection);
+
     engine.load(url);
+
+    // QMetaObject::invokeMethod(object, "onApiResponded", Q_ARG(QVariant, "Hello from main"));
 
     return app.exec();
 }

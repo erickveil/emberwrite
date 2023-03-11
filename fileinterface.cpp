@@ -51,6 +51,12 @@ QByteArray FileInterface::loadChatFile()
     return loadFile(chatPath);
 }
 
+void FileInterface::saveChatFile(QJsonDocument chat)
+{
+    QString chatPath = _appDirPath + "/chat.json";
+    writeFile(chatPath, chat.toJson());
+}
+
 QByteArray FileInterface::onFileReadyRead()
 {
     QByteArray data = _file.readAll();
