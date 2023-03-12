@@ -33,6 +33,7 @@ class AiConnector : public QObject
     std::function<void (QString, QAbstractSocket::SocketError)> _errorCallback;
 
     QJsonDocument _latestChat;
+    QJsonArray _trimmedChat;
 
     FileInterface _chatPreloader;
     FileInterface _chatSaver;
@@ -56,10 +57,29 @@ public:
 
     void requestChatCompletion();
 
+    /**
+     * @brief trimAndRequestChatCompletion
+     * Used when the chat we sent was too big.
+     * Removes the oldest message and tries again.
+     */
+    void trimAndRequestChatCompletion();
+
     QString loadKey();
     void saveKey(QString key);
 
     QJsonDocument loadChatFromFileAndAppend(QString newUserMsg);
+
+    /**
+     * @brief countTokens
+     * From here: https://platform.openai.com/docs/guides/chat/introduction
+     * tiktoken is a python program:
+     * https://github.com/openai/tiktoken
+     * So until I'm ready to re-implement it in C++, we're going to estimate.
+     * @param sendDoc
+     * @return
+     */
+    int countTokens(QJsonDocument sendDoc);
+
 private:
     QJsonDocument appendNewUserMsg(QJsonDocument fullChat, QString newMsg);
     QJsonDocument appendNewAssistantMsg(QJsonDocument fullChat, QString newMsg);
@@ -76,6 +96,9 @@ private:
     void parseResponseChoiceList(QJsonDocument responseDoc);
     void parseTokenUse(QJsonDocument responseDoc);
     void parseResponseChoice(QJsonValue choiceVal);
+
+    QJsonArray reduceMsgByTokenCount(QJsonArray msgList);
+    void retryIfTooBig(QByteArray response);
 
 signals:
 

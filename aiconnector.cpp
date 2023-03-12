@@ -33,9 +33,19 @@ void AiConnector::requestChatCompletion()
 {
     FileInterface file;
     QByteArray latestChat = file.loadChatFile();
+
     // TODO: Check for error?
     _latestChat = QJsonDocument::fromJson(latestChat);
     deliverToApi(_latestChat);
+}
+
+void AiConnector::trimAndRequestChatCompletion()
+{
+    QJsonArray trimmedChat = _trimmedChat;
+    // removes the oldest message
+    trimmedChat.removeFirst();
+    _trimmedChat = trimmedChat;
+    deliverToApi(QJsonDocument(trimmedChat));
 }
 
 QString AiConnector::loadKey()
@@ -81,18 +91,45 @@ QJsonDocument AiConnector::loadChatFromFileAndAppend(QString newUserMsg)
     return _latestChat;
 }
 
+int AiConnector::countTokens(QJsonDocument sendDoc)
+{
+    int numTokens = 0;
+    int numWords = 0;
+    QJsonArray msgList = sendDoc.array();
+    for (int i = 0; i < msgList.count(); ++i) {
+        QJsonObject msgObj = msgList[i].toObject();
+        QString msg = msgObj["content"].toString();
+        numTokens += 6;
+        QStringList lineList = msg.split("\n");
+        for (int l = 0; l < lineList.count(); ++l) {
+            QString line = lineList[l];
+            QStringList wordList = line.split(" ");
+            numWords += wordList.count();
+        }
+    }
+    // TODO: Adjust this value based on issues
+    // A higher constant reduces the tokens we attempt to send.
+    numTokens += (numWords * 1.20625);
+    //numTokens += (numWords * 1.2125);
+    //numTokens += (numWords * 1.225);
+    //numTokens += (numWords * 1.25);
+    return numTokens;
+}
+
 QJsonDocument AiConnector::appendNewUserMsg(QJsonDocument fullChat,
                                             QString newMsg)
 {
     return appendNewMsg(fullChat, newMsg, "user");
 }
 
-QJsonDocument AiConnector::appendNewAssistantMsg(QJsonDocument fullChat, QString newMsg)
+QJsonDocument AiConnector::appendNewAssistantMsg(QJsonDocument fullChat,
+                                                 QString newMsg)
 {
     return appendNewMsg(fullChat, newMsg, "assistant");
 }
 
-QJsonDocument AiConnector::appendNewMsg(QJsonDocument fullChat, QString newMsg, QString role)
+QJsonDocument AiConnector::appendNewMsg(QJsonDocument fullChat, QString newMsg,
+                                        QString role)
 {
     QJsonObject msgObj;
     msgObj.insert("role", role);
@@ -116,6 +153,7 @@ void AiConnector::saveChat(QJsonDocument chatDoc)
 void AiConnector::deliverToApi(QJsonDocument chatDoc)
 {
     QByteArray postData = createJsonPayload(chatDoc);
+
     QString authVal = createAuthHeaderVal();
     if (authVal == "") { return; }
     QNetworkRequest request = createApiRequest(authVal);
@@ -130,9 +168,14 @@ QByteArray AiConnector::createJsonPayload(QJsonDocument chatDoc)
 {
     // TODO: a config can set most of these values
     QJsonArray messageList = chatDoc.array();
+
+    QJsonArray tokenLimetedList = reduceMsgByTokenCount(messageList);
+    _trimmedChat = tokenLimetedList;
+    qDebug() << "Oldest message: " << tokenLimetedList[0].toObject()["content"];
+
     QJsonObject rootDataObj;
     rootDataObj.insert("model", "gpt-3.5-turbo");
-    rootDataObj.insert("messages", messageList);
+    rootDataObj.insert("messages", tokenLimetedList);
     rootDataObj.insert("frequency_penalty", 0);
     rootDataObj.insert("max_tokens", 256);
     rootDataObj.insert("presence_penalty", 0);
@@ -178,6 +221,7 @@ void AiConnector::onNetworkReplyFinished(QNetworkReply *reply)
                 + " || The response is: " + response;
         Logger::Instance()->warning(errWarning);
 
+        retryIfTooBig(response);
     }
     else {
         QByteArray response = reply->readAll();
@@ -259,6 +303,55 @@ void AiConnector::parseResponseChoice(QJsonValue choiceVal)
 
     // Alternatively, we can just use the callback:
     if (_successCallback) { _successCallback(resp); }
+}
+
+QJsonArray AiConnector::reduceMsgByTokenCount(QJsonArray msgList)
+{
+    QJsonArray reverseMsgList;
+    int maxTokens = 4000;
+    int lastElement = msgList.count() - 1;
+
+    for (int i = lastElement; i >= 0; --i) {
+        reverseMsgList.append(msgList[i]);
+        QJsonDocument counterDoc = QJsonDocument(reverseMsgList);
+        int accumulatedTokens = countTokens(counterDoc);
+        bool isMaxExceeded = accumulatedTokens > maxTokens;
+        if (isMaxExceeded) {
+            reverseMsgList.removeLast();
+            break;
+        }
+    }
+
+    QJsonArray destMsgList;
+    lastElement = reverseMsgList.count() - 1;
+    for (int i = lastElement; i >= 0; --i) {
+        destMsgList.append(reverseMsgList[i]);
+    }
+
+    return destMsgList;
+}
+
+void AiConnector::retryIfTooBig(QByteArray response)
+{
+    // TODO: We may want to offload the check for error type to its own
+    // method and not pop-up an error if we find a way to re-try.
+    // But leaving it as-is because I want to know how often we run into this
+    // issue.
+    QJsonDocument responseDoc = QJsonDocument::fromJson(response);
+    QJsonObject responseRoot = responseDoc.object();
+    QJsonObject errObj = responseRoot["error"].toObject();
+    bool isNoError = errObj.isEmpty();
+    if (isNoError) { return; }
+
+    QJsonValue codeVal = errObj["code"];
+    bool isNoCode = codeVal.isUndefined() || codeVal.isNull();
+    if (isNoCode) { return; }
+
+    QString codeStr = codeVal.toString();
+    bool isContextLenghtProblem = codeStr == "context_length_exceeded";
+    if (!isContextLenghtProblem) { return; }
+
+    trimAndRequestChatCompletion();
 }
 
 
