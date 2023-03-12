@@ -27,6 +27,7 @@ public:
 
     QByteArray loadFile(QString filepath);
     void writeFile(QString filepath, QByteArray data);
+    void appendFile(QString filepath, QByteArray data);
 
     QByteArray loadChatFile();
     void saveChatFile(QJsonDocument chat);

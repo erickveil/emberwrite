@@ -45,6 +45,21 @@ void FileInterface::writeFile(QString filepath, QByteArray data)
     onFileWriteComplete(bytesWritten);
 }
 
+void FileInterface::appendFile(QString filepath, QByteArray data)
+{
+     _file.setFileName(filepath);
+    bool isOpen = _file.open(QIODevice::Append);
+    if (!isOpen) {
+        qWarning() << "Cannot open file for writing at: " << filepath
+                   << " Error: " << _file.errorString();
+        emit fileError(_file.errorString());
+        return;
+    }
+
+    qint64 bytesWritten = _file.write(data);
+    onFileWriteComplete(bytesWritten);
+}
+
 QByteArray FileInterface::loadChatFile()
 {
     QString chatPath = _appDirPath + "/chat.json";

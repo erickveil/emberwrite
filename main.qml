@@ -4,17 +4,23 @@ import QtQuick.Shapes
 
 Window {
     id: mainWin
-    width: 800
-    height: 600
+    width: 1000
+    height: 1000
     visible: true
     title: qsTr("Hello World")
     color: "#202123"
 
     property var msgList: [];
 
-    function createMsgBubble(text, isRightAligned) {
+    function createMsgBubble(text, isRightAligned, role) {
         var rect = Qt.createQmlObject('import QtQuick 2.0; Rectangle {}',
                                       chatCol);
+
+        // Text replacement therapy here
+        text = text.replace(/(?:\r\n|\r|\n)/g, '<br/>');
+
+        // these values get saved when edited
+        Object.defineProperty(rect, 'role', { value: role });
 
         rect.radius = 10;
         // note can't bind this value the the parent Column type.
@@ -23,10 +29,15 @@ Window {
         rect.height = 0;
 
         var textItem =
-                Qt.createQmlObject('import QtQuick 2.0; Text {}', rect);
+             //Qt.createQmlObject('import QtQuick.Controls; TextArea {}', rect);
+                Qt.createQmlObject('import QtQuick; Text {}', rect);
 
-        // TODO: This isn't formatting properly
-        textItem.textFormat = Text.MarkdownText;
+        // Maybe we want to save the loaded text instead so we don't have to
+        // fudge around with formatting changes?
+        Object.defineProperty(rect, 'textObj', { value: textItem });
+
+        //textItem.textFormat = Text.MarkdownText;
+        textItem.textFormat = Text.RichText;
         textItem.rightPadding = 20;
         textItem.lineHeight = 1.5;
         textItem.text = text;
@@ -58,6 +69,14 @@ Window {
             return textItem.contentHeight + 20;
         });
 
+        /*
+          // if we're doing TextArea instead of Text:
+        var textBack =
+                Qt.createQmlObject('import QtQuick; Rectangle {}', textItem);
+        textBack.color = "transparent";
+        textItem.background = textBack;
+        */
+
 
         msgList.push(rect);
         return rect;
@@ -67,13 +86,16 @@ Window {
         for (let i=0; i < chatList.length; i++) {
             var msgObj = chatList[i];
             var msgRole = msgObj.role;
+            var isPrintableRole =
+                    (msgRole === "user" || msgRole === "assistant");
+            if (!isPrintableRole) { continue; }
             var isRightAligned = msgRole === "user";
             var msgContent = msgObj.content;
-            var msgBubble = createMsgBubble(msgContent, isRightAligned);
+            var msgBubble = createMsgBubble(msgContent, isRightAligned, msgRole);
             chatCol.children.push(msgBubble);
         }
         var bottomSpace = Qt.createQmlObject('import QtQuick 2.0; Rectangle {}',
-                                      chatCol);
+                                             chatCol);
         bottomSpace.width = Qt.binding(function() { return chatCol.width * 0.9 });
         bottomSpace.height = 200
         bottomSpace.color = "transparent"
@@ -82,7 +104,7 @@ Window {
 
         // set scrollview to bottom:
         // Note the presense of images from markdown messes this up and makes it
-        // impossible to do.
+        // impossible to do right.
         chatScroll.ScrollBar.vertical.position = chatScroll.contentItem.height;
     }
 
@@ -94,11 +116,67 @@ Window {
     }
 
     function onApiResponded(response) {
-        console.log("Signal caught: " + response);
+        reloadChatFromDisk();
+    }
+
+    function reloadChatFromDisk() {
         clearChatColumn();
         var chatData = contentLoader.loadChat();
         var chatList = JSON.parse(chatData);
         drawFullChat(chatList);
+    }
+
+    function saveExistingChat() {
+        var msgList = [];
+        for (var i = 0; i < msgList.length; i++) {
+            var savedObj = msgList[i];
+            var isNotRoleObj = savedObj.role = undefined;
+            if (isNotRoleObj) { continue; }
+
+            var msgObj = {};
+            msgObj.roll = savedObj.roll;
+            msgObj.content = savedObj.textObj.text;
+
+            msgList.push(msgObj);
+        }
+
+        var msgListStr = JSON.stringify(msgList);
+        // TODO: Replace the '<br>' back to '/n' and save to disk.
+    }
+
+    function popUpWarning(msg) {
+        warningText.text = msg;
+        warningDialog.visible = true;
+    }
+
+    Rectangle {
+        id: warningDialog
+        width: parent.width * 0.75
+        height: warningText.contentHeight + 20
+        color: "yellow"
+        border.color: "red"
+        border.width: 3
+        radius: 15
+        visible: false
+        anchors.centerIn: parent
+        z: 2
+
+        Text {
+            id: warningText
+            anchors.fill: parent
+            wrapMode: TextArea.Wrap
+            font.family: "StoneSansStd-Medium"
+            font.pointSize: 14
+            color: "black"
+            padding: 10
+            horizontalAlignment: Text.AlignHCenter
+        }
+        MouseArea {
+            anchors.fill: parent
+            onClicked: {
+                warningDialog.visible = false;
+            }
+        }
     }
 
     ScrollView {
@@ -193,46 +271,46 @@ Window {
 
         Rectangle {
             id: sendButton
-                anchors.left: inputScroller.right
-                anchors.bottom: inputScroller.bottom
-                radius: 20
-                width: 30
-                height: 30
-                color: "black"
-                border.color: "light blue"
-                border.width: 3
-                anchors.leftMargin: 10
-                anchors.bottomMargin: 10
+            anchors.left: inputScroller.right
+            anchors.bottom: inputScroller.bottom
+            radius: 20
+            width: 30
+            height: 30
+            color: "black"
+            border.color: "light blue"
+            border.width: 3
+            anchors.leftMargin: 10
+            anchors.bottomMargin: 10
 
-                MouseArea {
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    onEntered: {
-                        sendButton.color = "grey"
-                    }
-                    onExited: {
-                        sendButton.color = "black"
-                    }
-                    onClicked: {
-                        if (messageInput.text === "") { return; }
-
-                        // set user message and display
-                        var newChatData =
-                                contentLoader.appendNewUserMessage(messageInput.text);
-                        clearChatColumn();
-                        var chatList = JSON.parse(newChatData);
-                        drawFullChat(chatList);
-
-                        // clear chat window
-                        messageInput.text = "";
-
-
-                        // get assistant message and display
-                        contentLoader.requestNewResponse();
-                    }
-
-
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                onEntered: {
+                    sendButton.color = "grey"
                 }
+                onExited: {
+                    sendButton.color = "black"
+                }
+                onClicked: {
+                    if (messageInput.text === "") { return; }
+
+                    // set user message and display
+                    var newChatData =
+                            contentLoader.appendNewUserMessage(messageInput.text);
+                    clearChatColumn();
+                    var chatList = JSON.parse(newChatData);
+                    drawFullChat(chatList);
+
+                    // clear chat window
+                    messageInput.text = "";
+
+
+                    // get assistant message and display
+                    contentLoader.requestNewResponse();
+                }
+
+
+            }
 
             Image {
                 id: sendIcon
@@ -243,5 +321,39 @@ Window {
             }
         }
 
+        Rectangle {
+            id: loadButton
+            anchors.left: sendButton.left
+            anchors.bottom: sendButton.top
+            radius: 20
+            width: 30
+            height: 30
+            color: "black"
+            border.color: "light blue"
+            border.width: 3
+            anchors.leftMargin: 10
+            anchors.bottomMargin: 10
+
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                onEntered: {
+                    loadButton.color = "grey"
+                }
+                onExited: {
+                    loadButton.color = "black"
+                }
+                onClicked: { reloadChatFromDisk(); }
+            }
+
+            Image {
+                id: loadIcon
+                source: "qrc:/open.png"
+                width: 15
+                height: 15
+                anchors.centerIn: parent
+            }
+        }
     }
+
 }

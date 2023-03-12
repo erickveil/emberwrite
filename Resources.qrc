@@ -2,5 +2,7 @@
     <qresource prefix="/">
         <file>main.qml</file>
         <file>paper-plane-icon.png</file>
+        <file>save.png</file>
+        <file>open.png</file>
     </qresource>
 </RCC>

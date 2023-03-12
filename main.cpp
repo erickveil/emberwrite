@@ -7,7 +7,9 @@
 
 #include "aiconnector.h"
 #include "contentloader.h"
+#include "logger.h"
 
+Logger *Logger::_instance = nullptr;
 
 int main(int argc, char *argv[])
 {
@@ -40,14 +42,13 @@ int main(int argc, char *argv[])
         if (!obj && url == objUrl)
             QCoreApplication::exit(-1);
 
+        Logger *logger = Logger::Instance();
+        logger->init(obj);
         loader.init(obj);
 
-        //QMetaObject::invokeMethod(obj, "onApiResponded", Q_ARG(QVariant, "Hello from main."));
     }, Qt::QueuedConnection);
 
     engine.load(url);
-
-    // QMetaObject::invokeMethod(object, "onApiResponded", Q_ARG(QVariant, "Hello from main"));
 
     return app.exec();
 }

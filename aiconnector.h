@@ -19,6 +19,7 @@
 #include <QUrl>
 
 #include "fileinterface.h"
+#include "logger.h"
 
 class AiConnector : public QObject
 {
@@ -41,8 +42,6 @@ class AiConnector : public QObject
 public:
     explicit AiConnector(QObject *parent = nullptr);
     ~AiConnector();
-
-    void sendSingleMessage(QString msg);
 
     void setSuccessCallback(std::function<void (QString)> cb);
 

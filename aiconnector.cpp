@@ -17,103 +17,6 @@ AiConnector::~AiConnector()
     }
 }
 
-void AiConnector::sendSingleMessage(QString msg)
-{
-    if (_key == "") {
-        qWarning() << "Can't send. No key.";
-        return;
-    }
-    qDebug() << "Sending: " << msg;
-
-    // create json payload
-    QJsonObject messageObj;
-    messageObj.insert("role", "user");
-    messageObj.insert("content", msg);
-
-    QJsonArray messageList;
-    messageList.append(messageObj);
-
-    QJsonObject rootDataObj;
-    rootDataObj.insert("model", "gpt-3.5-turbo");
-    rootDataObj.insert("messages", messageList);
-    rootDataObj.insert("frequency_penalty", 0);
-    rootDataObj.insert("max_tokens", 256);
-    rootDataObj.insert("presence_penalty", 0);
-    rootDataObj.insert("temperature", 0.7);
-    rootDataObj.insert("top_p", 1);
-    rootDataObj.insert("stream", false);
-
-    // serialize data
-    QJsonDocument jsonDoc(rootDataObj);
-    QByteArray postData = jsonDoc.toJson();
-
-    qDebug() << "POST";
-    qDebug() << postData;
-
-
-    QString authVal = "Bearer " + _key;
-
-    // Create request and set the headers
-    QUrl url("https://api.openai.com/v1/chat/completions");
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    request.setRawHeader("Authorization", authVal.toLocal8Bit());
-
-    // Send POST request
-    QNetworkReply *reply = _manager->post(request, postData);
-
-    connect(reply, &QNetworkReply::finished, [=]() {
-        if (reply->error() != QNetworkReply::NoError) {
-            qDebug() << "Error: " << reply->errorString();
-        }
-        else {
-            QByteArray response = reply->readAll();
-
-            // Parse out the response:
-
-            QJsonParseError responseParseError;
-            auto responseDoc =
-                    QJsonDocument::fromJson(response, &responseParseError);
-            bool isParseError = (responseDoc.isNull());
-            if (isParseError) {
-                qDebug() << "Error parsing response: " << response
-                         << " Error string: "
-                         << responseParseError.errorString();
-            }
-            else {
-                QJsonValue usageVal = responseDoc["usage"];
-                QJsonObject usageObj = usageVal.toObject();
-                int errorVal = -1;
-                int promptTokens = usageObj["prompt_tokens"].toInt(errorVal);
-                int responseTokens =
-                        usageObj["completion_tokens"].toInt(errorVal);
-                int totalTokens = usageObj["total_tokens"].toInt(errorVal);
-
-                qDebug() << "Useage: prompt tokens - " << promptTokens
-                         << " | response tokens - " << responseTokens
-                         << " | total - " << totalTokens;
-
-                QJsonValue choiceValue = responseDoc["choices"];
-                QJsonArray choiceList = choiceValue.toArray();
-
-                // Maybe validate list size > 0
-                for (int i = 0; i < choiceList.size(); ++i) {
-                    QJsonValue choiceVal = choiceList[i];
-                    QJsonObject choiceObj = choiceVal.toObject();
-                    QJsonValue respMsgVal = choiceObj["message"];
-                    QJsonObject respMsgObj = respMsgVal.toObject();
-                    // Maybe validate that respMsgObj["role"] == "assistant"
-                    QJsonValue respContVal = respMsgObj["content"];
-                    QString respContStr = respContVal.toString().trimmed();
-                    qDebug() << "Response: " << respContStr;
-                }
-            }
-
-        }
-        reply->deleteLater();
-    });
-}
-
 void AiConnector::setSuccessCallback(std::function<void (QString)> cb)
 {
     _successCallback = cb;
@@ -141,7 +44,8 @@ QString AiConnector::loadKey()
     QFile file(keyPath);
     bool isOpen = file.open(QIODevice::ReadOnly);
     if (!isOpen) {
-        qWarning() << "Cannot open key file for reading at: " << keyPath;
+        QString errMsg = "Cannot open key file for reading at: " + keyPath;
+        Logger::Instance()->warning(errMsg);
         return "";
     }
     QTextStream fileStream(&file);
@@ -159,7 +63,8 @@ void AiConnector::saveKey(QString key)
     QFile file(keyPath);
     bool isOpen = file.open(QIODevice::WriteOnly);
     if (!isOpen) {
-        qWarning() << "Cannot open key file for writing at: " << keyPath;
+        QString errMsg = "Cannot open key file for writing at: " + keyPath;
+        Logger::Instance()->warning(errMsg);
         return;
     }
     QTextStream fileStream(&file);
@@ -170,7 +75,6 @@ void AiConnector::saveKey(QString key)
 QJsonDocument AiConnector::loadChatFromFileAndAppend(QString newUserMsg)
 {
     QByteArray fullChat = _chatPreloader.loadChatFile();
-    qDebug() << "Loaded chat: " << fullChat;
     QJsonDocument chatDoc = QJsonDocument::fromJson(fullChat);
     QJsonDocument appendedChat = appendNewUserMsg(chatDoc, newUserMsg);
     _latestChat = appendedChat;
@@ -206,8 +110,6 @@ void AiConnector::saveChat(QJsonDocument chatDoc)
     QString chatPath = _appDirPath + "/chat.json";
     QByteArray chatContents = chatDoc.toJson();
     _chatSaver.writeFile(chatPath, chatContents);
-    qDebug() << "ready to deliver";
-    qDebug() << chatDoc;
     _latestChat = chatDoc;
 }
 
@@ -219,8 +121,6 @@ void AiConnector::deliverToApi(QJsonDocument chatDoc)
     QNetworkRequest request = createApiRequest(authVal);
 
     QNetworkReply *reply = _manager->post(request, postData);
-    qDebug() << "POST";
-    qDebug() << postData;
 
     connect(reply, &QNetworkReply::finished,
             [=]() { onNetworkReplyFinished(reply); });
@@ -247,7 +147,8 @@ QByteArray AiConnector::createJsonPayload(QJsonDocument chatDoc)
 QString AiConnector::createAuthHeaderVal()
 {
     if (_key == "") {
-        qWarning() << "Can't send. No key.";
+        QString errMsg = "Can't send. No key.";
+        Logger::Instance()->warning(errMsg);
         return "";
     }
     QString authVal = "Bearer " + _key;
@@ -270,10 +171,17 @@ void AiConnector::onNetworkReplyFinished(QNetworkReply *reply)
     qDebug() << "Network Reply Finished.";
 
     if (reply->error() != QNetworkReply::NoError) {
-        qWarning() << "Error: " << reply->errorString();
+        QByteArray response = reply->readAll();
+        qDebug() << "API Error Response: " << response;
+
+        QString errWarning = "QNetworkReply Error: " + reply->errorString()
+                + " || The response is: " + response;
+        Logger::Instance()->warning(errWarning);
+
     }
     else {
         QByteArray response = reply->readAll();
+        qDebug() << "API Response: " << response;
         parseApiResponse(response);
     }
     reply->deleteLater();
@@ -285,9 +193,10 @@ void AiConnector::parseApiResponse(QByteArray response)
     auto responseDoc = QJsonDocument::fromJson(response, &responseParseError);
     bool isParseError = (responseDoc.isNull());
     if (isParseError) {
-        qWarning() << "Error parsing response: " << response
-                 << " Error string: "
-                 << responseParseError.errorString();
+        QString errMsg = "Error parsing response: " + response
+                 + " Error string: "
+                 + responseParseError.errorString();
+        Logger::Instance()->warning(errMsg);
     }
     else {
         parseResponseChoiceList(responseDoc);
@@ -302,7 +211,8 @@ void AiConnector::parseResponseChoiceList(QJsonDocument responseDoc)
     QJsonArray choiceList = choiceValue.toArray();
 
     if (choiceList.size() > 1) {
-        // I haven't seen this before.
+        // I haven't seen this before. (you can explicitly request this in the
+        // api).
         qDebug() << "The response choice list size came back greater than 1!";
     }
     if (choiceList.size() <= 0) {
@@ -338,7 +248,7 @@ void AiConnector::parseResponseChoice(QJsonValue choiceVal)
     // Maybe validate that respMsgObj["role"] == "assistant"?
     QJsonValue respContVal = respMsgObj["content"];
     QString resp = respContVal.toString().trimmed();
-    qDebug() << "Response: " << resp;
+    qDebug() << "Final Response Text: " << resp;
 
     _latestChat = appendNewAssistantMsg(_latestChat, resp);
     saveChat(_latestChat);

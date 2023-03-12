@@ -5,6 +5,7 @@
 
 #include "aiconnector.h"
 #include "fileinterface.h"
+#include "logger.h"
 
 class ContentLoader : public QObject
 {

@@ -4,6 +4,7 @@ SOURCES += \
         aiconnector.cpp \
         contentloader.cpp \
         fileinterface.cpp \
+        logger.cpp \
         main.cpp
 
 resources.files = main.qml 
@@ -25,4 +26,5 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 HEADERS += \
     aiconnector.h \
     contentloader.h \
-    fileinterface.h
+    fileinterface.h \
+    logger.h
