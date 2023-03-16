@@ -34,6 +34,11 @@ void ContentLoader::requestNewResponse()
     _api.requestChatCompletion();
 }
 
+bool ContentLoader::isOldestMsg(QString msg)
+{
+    return _api.isOldestMsg(msg);
+}
+
 void ContentLoader::onApiResponded(QString response)
 {
     QMetaObject::invokeMethod(_qmlMainWindowObj, "onApiResponded",

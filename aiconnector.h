@@ -40,6 +40,8 @@ class AiConnector : public QObject
 
     QString _key;
 
+    QString _oldestDeliverable;
+
 public:
     explicit AiConnector(QObject *parent = nullptr);
     ~AiConnector();
@@ -79,6 +81,8 @@ public:
      * @return
      */
     int countTokens(QJsonDocument sendDoc);
+
+    bool isOldestMsg(QString compare);
 
 private:
     QJsonDocument appendNewUserMsg(QJsonDocument fullChat, QString newMsg);

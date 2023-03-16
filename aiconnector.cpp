@@ -116,6 +116,12 @@ int AiConnector::countTokens(QJsonDocument sendDoc)
     return numTokens;
 }
 
+bool AiConnector::isOldestMsg(QString compare)
+{
+    if (_oldestDeliverable == "") { return true; }
+    return compare == _oldestDeliverable;
+}
+
 QJsonDocument AiConnector::appendNewUserMsg(QJsonDocument fullChat,
                                             QString newMsg)
 {
@@ -171,7 +177,9 @@ QByteArray AiConnector::createJsonPayload(QJsonDocument chatDoc)
 
     QJsonArray tokenLimetedList = reduceMsgByTokenCount(messageList);
     _trimmedChat = tokenLimetedList;
-    qDebug() << "Oldest message: " << tokenLimetedList[0].toObject()["content"];
+
+    _oldestDeliverable = (tokenLimetedList[0].toObject()["content"].toString());
+    qDebug() << "Oldest message: " << _oldestDeliverable;
 
     QJsonObject rootDataObj;
     rootDataObj.insert("model", "gpt-3.5-turbo");

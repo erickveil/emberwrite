@@ -39,6 +39,8 @@ public:
      */
     Q_INVOKABLE void requestNewResponse();
 
+    Q_INVOKABLE bool isOldestMsg(QString msg);
+
 
 signals:
 

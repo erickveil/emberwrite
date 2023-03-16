@@ -12,7 +12,7 @@ Window {
 
     property var msgList: [];
 
-    function createMsgBubble(text, isRightAligned, role) {
+    function createMsgBubble(text, isRightAligned, role, isRemembered) {
         var rect = Qt.createQmlObject('import QtQuick 2.0; Rectangle {}',
                                       chatCol);
 
@@ -41,7 +41,9 @@ Window {
         textItem.rightPadding = 20;
         textItem.lineHeight = 1.5;
         textItem.text = text;
-        textItem.color = "#D1D5DB";
+
+        textItem.color = isRemembered ? "#D1D5DB" : "gray";
+
         textItem.font.family = "StoneSansStd-Medium";
         textItem.font.pointSize = 14;
         textItem.verticalAlignment = Text.AlignVCenter;
@@ -82,7 +84,9 @@ Window {
         return rect;
     }
 
+
     function drawFullChat(chatList) {
+        var isRemembered = false;
         for (let i=0; i < chatList.length; i++) {
             var msgObj = chatList[i];
             var msgRole = msgObj.role;
@@ -91,7 +95,11 @@ Window {
             if (!isPrintableRole) { continue; }
             var isRightAligned = msgRole === "user";
             var msgContent = msgObj.content;
-            var msgBubble = createMsgBubble(msgContent, isRightAligned, msgRole);
+
+            if (contentLoader.isOldestMsg(msgContent)) { isRemembered = true; }
+
+            var msgBubble = createMsgBubble(msgContent, isRightAligned,
+                                            msgRole, isRemembered);
             chatCol.children.push(msgBubble);
         }
         var bottomSpace = Qt.createQmlObject('import QtQuick 2.0; Rectangle {}',
