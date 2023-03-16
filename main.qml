@@ -86,6 +86,12 @@ Window {
 
 
     function drawFullChat(chatList) {
+        var isChatEmpty = (chatList.length === 0);
+        if (isChatEmpty) {
+            console.log("Empty chat. Skipping draw.");
+            return;
+        }
+
         var isRemembered = false;
         for (let i=0; i < chatList.length; i++) {
             var msgObj = chatList[i];
@@ -130,6 +136,11 @@ Window {
     function reloadChatFromDisk() {
         clearChatColumn();
         var chatData = contentLoader.loadChat();
+        var isNewChat = (chatData === "");
+        if (isNewChat) {
+            console.log("No chat to refresh.");
+            return;
+        }
         var chatList = JSON.parse(chatData);
         drawFullChat(chatList);
     }
@@ -222,13 +233,6 @@ Window {
                     return;
                 }
                 var chatList = JSON.parse(chatData);
-
-                var isEmptyChat = (chatList.length === 0);
-                if (isEmptyChat) {
-                    console.log("New, empty chat.");
-                    return;
-                }
-
                 drawFullChat(chatList);
             }
         }
@@ -315,14 +319,20 @@ Window {
 
                     // set user message and display
                     var newChatData =
-                            contentLoader.appendNewUserMessage(messageInput.text);
-                    clearChatColumn();
-                    var chatList = JSON.parse(newChatData);
-                    drawFullChat(chatList);
+                          contentLoader.appendNewUserMessage(messageInput.text);
 
-                    // clear chat window
+                    var isNoChatData = (newChatData === "");
+                    if (isNoChatData) {
+                        console.log("Chat file is empty.");
+                    }
+                    else {
+                        clearChatColumn();
+                        var chatList = JSON.parse(newChatData);
+                        drawFullChat(chatList);
+                    }
+
+                    // clear chat input window
                     messageInput.text = "";
-
 
                     // get assistant message and display
                     contentLoader.requestNewResponse();
