@@ -216,9 +216,20 @@ Window {
 
             Component.onCompleted: {
                 var chatData = contentLoader.loadChat();
+                var isNoChatYet = (chatData === "");
+                if (isNoChatYet) {
+                    console.log("New chat file.");
+                    return;
+                }
                 var chatList = JSON.parse(chatData);
-                drawFullChat(chatList);
 
+                var isEmptyChat = (chatList.length === 0);
+                if (isEmptyChat) {
+                    console.log("New, empty chat.");
+                    return;
+                }
+
+                drawFullChat(chatList);
             }
         }
     }
