@@ -274,7 +274,7 @@ Window {
         ScrollView {
             id: inputScroller
             width: parent.width * 0.8
-            height: Math.min(contentHeight + 20, 200)
+            height: Math.min(messageInput.contentHeight + 40, 200)
             anchors.bottom: parent.bottom
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottomMargin: 10
