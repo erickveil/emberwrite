@@ -108,9 +108,9 @@ int AiConnector::countTokens(QJsonDocument sendDoc)
     // TODO: Adjust this value based on issues
     // A higher constant reduces the tokens we attempt to send.
     //numTokens += (numWords * 1.20625);
-    numTokens += (numWords * 1.2125);
+    //numTokens += (numWords * 1.2125);
     //numTokens += (numWords * 1.225);
-    //numTokens += (numWords * 1.25);
+    numTokens += (numWords * 1.25);
     return numTokens;
 }
 
