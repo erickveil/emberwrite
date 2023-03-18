@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Shapes
+import QtMultimedia
 
 Window {
     id: mainWin
@@ -84,6 +85,17 @@ Window {
         return rect;
     }
 
+    SoundEffect {
+        id: sendSound
+        source: "qrc:/send.wav"
+    }
+
+    SoundEffect {
+        id: receiveSound
+        source: "qrc:/redeive.wav"
+    }
+
+
 
     function drawFullChat(chatList) {
         var isChatEmpty = (chatList.length === 0);
@@ -131,6 +143,7 @@ Window {
 
     function onApiResponded(response) {
         reloadChatFromDisk();
+        receiveSound.play();
     }
 
     function reloadChatFromDisk() {
@@ -336,6 +349,8 @@ Window {
 
                     // get assistant message and display
                     contentLoader.requestNewResponse();
+
+                    sendSound.play();
                 }
 
 

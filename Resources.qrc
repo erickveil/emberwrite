@@ -4,5 +4,7 @@
         <file>paper-plane-icon.png</file>
         <file>save.png</file>
         <file>open.png</file>
+        <file>redeive.wav</file>
+        <file>send.wav</file>
     </qresource>
 </RCC>
