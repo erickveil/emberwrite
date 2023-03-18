@@ -59,8 +59,6 @@ QString AiConnector::loadKey()
         return "";
     }
     QTextStream fileStream(&file);
-    // Maybe make this async too if we get hangs.
-    file.waitForReadyRead(10000);
     QString key = fileStream.readAll();
     file.close();
 
@@ -109,8 +107,8 @@ int AiConnector::countTokens(QJsonDocument sendDoc)
     }
     // TODO: Adjust this value based on issues
     // A higher constant reduces the tokens we attempt to send.
-    numTokens += (numWords * 1.20625);
-    //numTokens += (numWords * 1.2125);
+    //numTokens += (numWords * 1.20625);
+    numTokens += (numWords * 1.2125);
     //numTokens += (numWords * 1.225);
     //numTokens += (numWords * 1.25);
     return numTokens;
