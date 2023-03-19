@@ -11,9 +11,10 @@ Window {
     title: qsTr("Hello World")
     color: "#202123"
 
-    property var msgList: [];
+    property var msgBubbleObjList: [];
+    property var msgJsonList: [];
 
-    function createMsgBubble(text, isRightAligned, role, isRemembered) {
+    function createMsgBubble(text, isRightAligned, role, isRemembered, index) {
         var rect = Qt.createQmlObject('import QtQuick 2.0; Rectangle {}',
                                       chatCol);
 
@@ -22,6 +23,7 @@ Window {
 
         // these values get saved when edited
         Object.defineProperty(rect, 'role', { value: role });
+        Object.defineProperty(rect, 'index', { value: index });
 
         rect.radius = 10;
         // note can't bind this value the the parent Column type.
@@ -72,38 +74,26 @@ Window {
             return textItem.contentHeight + 20;
         });
 
-        /*
-          // if we're doing TextArea instead of Text:
-        var textBack =
-                Qt.createQmlObject('import QtQuick; Rectangle {}', textItem);
-        textBack.color = "transparent";
-        textItem.background = textBack;
-        */
+        var clickZone =
+                Qt.createQmlObject('import QtQuick; MouseArea {}', rect);
+        clickZone.anchors.fill = rect;
+        clickZone.onClicked.connect(function() {
+            startEdit(rect);
+        });
 
-
-        msgList.push(rect);
+        msgBubbleObjList.push(rect);
         return rect;
     }
 
-    SoundEffect {
-        id: sendSound
-        source: "qrc:/send.wav"
-    }
-
-    SoundEffect {
-        id: receiveSound
-        source: "qrc:/redeive.wav"
-    }
-
-
-
     function drawFullChat(chatList) {
+
         var isChatEmpty = (chatList.length === 0);
         if (isChatEmpty) {
             console.log("Empty chat. Skipping draw.");
             return;
         }
 
+        mainWin.msgJsonList = chatList;
         var isRemembered = false;
         for (let i=0; i < chatList.length; i++) {
             var msgObj = chatList[i];
@@ -117,7 +107,7 @@ Window {
             if (contentLoader.isOldestMsg(msgContent)) { isRemembered = true; }
 
             var msgBubble = createMsgBubble(msgContent, isRightAligned,
-                                            msgRole, isRemembered);
+                                            msgRole, isRemembered, i);
             chatCol.children.push(msgBubble);
         }
         var bottomSpace = Qt.createQmlObject('import QtQuick 2.0; Rectangle {}',
@@ -125,7 +115,7 @@ Window {
         bottomSpace.width = Qt.binding(function() { return chatCol.width * 0.9 });
         bottomSpace.height = 200
         bottomSpace.color = "transparent"
-        msgList.push(bottomSpace);
+        msgBubbleObjList.push(bottomSpace);
         chatCol.children.push(bottomSpace);
 
         // set scrollview to bottom:
@@ -135,10 +125,10 @@ Window {
     }
 
     function clearChatColumn() {
-        for (var i = 0; i < msgList.length; i++) {
-            msgList[i].destroy();
+        for (var i = 0; i < msgBubbleObjList.length; i++) {
+            msgBubbleObjList[i].destroy();
         }
-        msgList = [];
+        msgBubbleObjList = [];
     }
 
     function onApiResponded(response) {
@@ -155,30 +145,52 @@ Window {
             return;
         }
         var chatList = JSON.parse(chatData);
+        mainWin.msgJsonList = chatList;
         drawFullChat(chatList);
     }
 
     function saveExistingChat() {
-        var msgList = [];
-        for (var i = 0; i < msgList.length; i++) {
-            var savedObj = msgList[i];
-            var isNotRoleObj = savedObj.role = undefined;
-            if (isNotRoleObj) { continue; }
-
-            var msgObj = {};
-            msgObj.roll = savedObj.roll;
-            msgObj.content = savedObj.textObj.text;
-
-            msgList.push(msgObj);
-        }
-
+        var msgList = mainWin.msgJsonList;
         var msgListStr = JSON.stringify(msgList);
-        // TODO: Replace the '<br>' back to '/n' and save to disk.
+        contentLoader.saveChat(msgListStr);
     }
 
     function popUpWarning(msg) {
         warningText.text = msg;
         warningDialog.visible = true;
+    }
+
+    // When click edit save button
+    function editMessage(msgIndex) {
+        var newMsg = editInput.text;
+        mainWin.msgJsonList[msgIndex].content= newMsg;
+        saveExistingChat();
+        clearChatColumn();
+        drawFullChat(mainWin.msgJsonList);
+        editScroller.visible = false;
+    }
+
+    function startEdit(bubbleObj) {
+        var index = bubbleObj.index;
+        var msgObj = mainWin.msgJsonList[index];
+        var msgText = msgObj["content"];
+
+        console.log("Editing index #" + index + " content: " + msgText);
+
+        editInput.text = msgText;
+        editScroller.msgBubbleOrigin = bubbleObj;
+        editScroller.msgIndex = index;
+        editScroller.visible = true;
+    }
+
+    SoundEffect {
+        id: sendSound
+        source: "qrc:/send.wav"
+    }
+
+    SoundEffect {
+        id: receiveSound
+        source: "qrc:/redeive.wav"
     }
 
     Rectangle {
@@ -251,6 +263,118 @@ Window {
         }
     }
 
+    ScrollView {
+        id: editScroller
+        width: parent.width * 0.8
+        height: Math.min(editInput.contentHeight + 40, 200)
+        anchors.centerIn: parent
+        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+
+        visible: false
+        property int msgIndex;
+        property var msgBubbleOrigin;
+
+        ScrollBar.vertical: ScrollBar {
+            id: editScrollbar
+            width: 10
+            height: Math.min(editInput.contentHeight + 40, 400)
+            anchors.top: editScroller.top
+            anchors.bottom: editScroller.bottom
+            anchors.right: editScroller.right
+            background: Rectangle {
+                color: "#444653"
+            }
+        }
+        TextArea {
+            id: editInput
+            wrapMode: TextArea.Wrap
+            font.family: "StoneSansStd-Medium"
+            font.pointSize: 14
+            color: "#D1D5DB"
+            padding: 10
+            placeholderText: qsTr("Enter message...")
+            background: Rectangle {
+                radius: 10
+                //color: "#343541"
+                color: "black"
+                border.color: "dark grey"
+                border.width: 4
+            }
+        }
+
+        Rectangle {
+            id: editSaveButton
+            anchors.right: editInput.right
+            anchors.bottom: editInput.bottom
+            radius: 20
+            width: 30
+            height: 30
+            color: "black"
+            border.color: "light blue"
+            border.width: 3
+            anchors.rightMargin: 10
+            anchors.bottomMargin: 10
+
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                onEntered: {
+                    editSaveButton.color = "grey"
+                }
+                onExited: {
+                    editSaveButton.color = "black"
+                }
+                onClicked: {
+                    editMessage(editScroller.msgIndex);
+                }
+            }
+
+            Image {
+                id: saveIcon
+                source: "qrc:/save.png"
+                width: 15
+                height: 15
+                anchors.centerIn: parent
+            }
+        }
+
+        Rectangle {
+            id: editCloseButton
+            anchors.right: editSaveButton.left
+            anchors.bottom: editInput.bottom
+            radius: 20
+            width: 30
+            height: 30
+            color: "black"
+            border.color: "pink"
+            border.width: 3
+            anchors.rightMargin: 10
+            anchors.bottomMargin: 10
+
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                onEntered: {
+                    editCloseButton.color = "grey"
+                }
+                onExited: {
+                    editCloseButton.color = "black"
+                }
+                onClicked: {
+                    editScroller.visible = false
+                }
+            }
+
+            Image {
+                id: closeIcon
+                source: "qrc:/close.png"
+                width: 20
+                height: 20
+                anchors.centerIn: parent
+            }
+        }
+    }
+
     Rectangle {
         id: inputFade
         width: parent.width
@@ -269,7 +393,6 @@ Window {
             }
 
         }
-
 
         ScrollView {
             id: inputScroller
