@@ -6,5 +6,6 @@
         <file>open.png</file>
         <file>redeive.wav</file>
         <file>send.wav</file>
+        <file>close.png</file>
     </qresource>
 </RCC>

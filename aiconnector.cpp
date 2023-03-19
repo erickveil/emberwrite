@@ -185,7 +185,11 @@ QByteArray AiConnector::createJsonPayload(QJsonDocument chatDoc)
     rootDataObj.insert("frequency_penalty", 0);
     rootDataObj.insert("max_tokens", 256);
     rootDataObj.insert("presence_penalty", 0);
-    rootDataObj.insert("temperature", 0.7);
+
+    // Observed some minor repetition on 0.7
+    rootDataObj.insert("temperature", 1.0);
+    //rootDataObj.insert("temperature", 0.7);
+
     rootDataObj.insert("stream", false);
     QJsonDocument jsonDoc(rootDataObj);
     QByteArray postData = jsonDoc.toJson();

@@ -20,6 +20,14 @@ QString ContentLoader::loadChat()
     return file.loadChatFile();
 }
 
+void ContentLoader::saveChat(QString chatJson)
+{
+    QJsonDocument chatDoc = QJsonDocument::fromJson(chatJson.toLocal8Bit());
+    FileInterface file;
+    file.saveChatFile(chatDoc);
+
+}
+
 QString ContentLoader::appendNewUserMessage(QString msg)
 {
     AiConnector api(this);

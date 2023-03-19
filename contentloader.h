@@ -21,6 +21,8 @@ public:
 
     Q_INVOKABLE QString loadChat();
 
+    Q_INVOKABLE void saveChat(QString chatJson);
+
     /**
      * @brief appendNewUserMessage
      * Will append the user message to the chat, save it to
