@@ -266,7 +266,7 @@ Window {
     ScrollView {
         id: editScroller
         width: parent.width * 0.8
-        height: 100
+        height: Math.min(editInput.contentHeight + 40, 200)
         anchors.centerIn: parent
         ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
@@ -277,7 +277,7 @@ Window {
         ScrollBar.vertical: ScrollBar {
             id: editScrollbar
             width: 10
-            height: Math.min(editInput.contentHeight + 40, 200)
+            height: Math.min(editInput.contentHeight + 40, 400)
             anchors.top: editScroller.top
             anchors.bottom: editScroller.bottom
             anchors.right: editScroller.right
@@ -296,7 +296,9 @@ Window {
             background: Rectangle {
                 radius: 10
                 //color: "#343541"
-                color: "brown"
+                color: "black"
+                border.color: "dark grey"
+                border.width: 4
             }
         }
 
