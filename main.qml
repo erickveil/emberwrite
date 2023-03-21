@@ -8,7 +8,7 @@ Window {
     width: 1000
     height: 1000
     visible: true
-    title: qsTr("Hello World")
+    title: qsTr("EmberWrite")
     color: "#202123"
 
     property var msgBubbleObjList: [];
